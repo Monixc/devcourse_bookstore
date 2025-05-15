@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-router.use(express.json);
+router.use(express.json());
 router.post("/join", (req, res) => {
   res.json({ message: "회원가입" });
 });
