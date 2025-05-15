@@ -2,13 +2,20 @@ const conn = require("../mariadb");
 const { StatusCodes } = require("http-status-codes");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const crypto = require("crypto");
 
 dotenv.config();
 
 const join = (req, res) => {
   const { email, password } = req.body;
-  let sql = "INSERT INTO users (email, password) VALUES (?, ?)";
-  let values = [email, password];
+  let sql = "INSERT INTO users (email, password, salt) VALUES (?, ?, ?)";
+  //암호화
+  const salt = crypto.randomBytes(64).toString("base64");
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
+    .toString("base64");
+
+  let values = [email, hash, salt];
 
   conn.query(sql, values, (err, results) => {
     if (err) {
