@@ -37,7 +37,12 @@ const login = (req, res) => {
     }
 
     const loginUser = results[0];
-    if (loginUser && loginUser.password === password) {
+
+    const hash = crypto
+      .pbkdf2Sync(password, loginUser.salt, 10000, 64, "sha512")
+      .toString("base64");
+
+    if (loginUser && loginUser.password === hash) {
       const token = jwt.sign(
         {
           email: loginUser.email,
@@ -76,7 +81,13 @@ const requrestReset = (req, res) => {
 const passwordReset = (req, res) => {
   const { email, password } = req.body;
   let sql = "UPDATE users SET password = ? WHERE email = ?";
-  let values = [password, email];
+
+  const salt = crypto.randomBytes(64).toString("base64");
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
+    .toString("base64");
+
+  let values = [hash, salt, email];
 
   conn.query(sql, values, (err, results) => {
     if (err) {
