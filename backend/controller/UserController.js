@@ -51,7 +51,38 @@ const login = (req, res) => {
   });
 };
 
-const requrestReset = () => {};
-const passwordReset = () => {};
+const requrestReset = (req, res) => {
+  const { email } = req.body;
+  let sql = "SELECT * FROM users WHERE email = ?";
+  conn.query(sql, email, (err, results) => {
+    if (err) return res.status(StatusCodes.BAD_REQUEST).end();
+
+    const user = results[0];
+    if (user) {
+      return res.status(StatusCodes.OK).json({ email: user.email });
+    } else {
+      return res.status(StatusCodes.UNAUTHORIZED).end();
+    }
+  });
+};
+
+const passwordReset = (req, res) => {
+  const { email, password } = req.body;
+  let sql = "UPDATE users SET password = ? WHERE email = ?";
+  let values = [password, email];
+
+  conn.query(sql, values, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(StatusCodes.BAD_REQUEST).end();
+    }
+
+    if (results.affectedRows == 0) {
+      return res.status(StatusCodes.NOT_FOUND).end();
+    } else {
+      return res.status(StatusCodes.OK).json(results);
+    }
+  });
+};
 
 module.exports = { join, login, requrestReset, passwordReset };
