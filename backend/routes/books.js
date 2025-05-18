@@ -1,18 +1,15 @@
 const express = require("express");
 const router = express.Router();
+const {
+  getAllBooks,
+  getBookById,
+  getBooksByCategory,
+} = require("../controller/BookController");
 
 router.use(express.json());
-router.get("/", (req, res) => {
-  res.json({ message: "전체 도서 조회" });
-});
 
-router.get("/:id", (req, res) => {
-  res.json({ message: "도서 개별 조회" });
-});
-
-router.post("/", (req, res) => {
-  //쿼리 스트링 사용
-  res.json({ message: "카테고리 별 도서 목록 조회" });
-});
+router.get("/", getAllBooks);
+router.get("/:id", getBookById);
+router.get("/category/:id", getBooksByCategory);
 
 module.exports = router;
