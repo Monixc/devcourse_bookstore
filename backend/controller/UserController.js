@@ -8,19 +8,20 @@ dotenv.config();
 
 const join = (req, res) => {
   const { email, password } = req.body;
-  let sql = "INSERT INTO users (email, password, salt) VALUES (?, ?, ?)";
+  let sql =
+    "INSERT INTO users (email, password, salt, name) VALUES (?, ?, ?, ?)";
   //암호화
   const salt = crypto.randomBytes(64).toString("base64");
   const hash = crypto
     .pbkdf2Sync(password, salt, 10000, 64, "sha512")
     .toString("base64");
 
-  let values = [email, hash, salt];
+  let values = [email, hash, salt, ""]; // 빈 문자열을 name 기본값으로 설정
 
   conn.query(sql, values, (err, results) => {
     if (err) {
       console.log(err);
-      res.status(StatusCodes.BAD_REQUEST).end();
+      return res.status(StatusCodes.BAD_REQUEST).end(); // return 추가
     }
     return res.status(StatusCodes.CREATED).json(results);
   });
@@ -47,7 +48,7 @@ const login = (req, res) => {
         {
           email: loginUser.email,
         },
-        process.env.JWT_SECRET,
+        process.env.PRIVATE_KEY,
         { expiresIn: "5m", issuer: "monicx" }
       );
 
@@ -80,7 +81,7 @@ const requrestReset = (req, res) => {
 
 const passwordReset = (req, res) => {
   const { email, password } = req.body;
-  let sql = "UPDATE users SET password = ? WHERE email = ?";
+  let sql = "UPDATE users SET password = ?, salt = ? WHERE email = ?";
 
   const salt = crypto.randomBytes(64).toString("base64");
   const hash = crypto
