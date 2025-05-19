@@ -5,7 +5,7 @@ const getAllBooks = (req, res) => {
   let { category_id } = req.query;
 
   if (category_id) {
-    let sql = "SELECT * FROM books WHERE category_id = ?";
+    let sql = `SELECT * FROM books LEFT JOIN category ON books.category_id = category.id WHERE books.category_id=?`;
     conn.query(sql, category_id, (err, result) => {
       if (err) {
         return res.status(StatusCodes.BAD_REQUEST).end();
@@ -15,7 +15,7 @@ const getAllBooks = (req, res) => {
       else return res.status(StatusCodes.NOT_FOUND).end();
     });
   } else {
-    let sql = "SELECT * FROM books";
+    let sql = `SELECT * FROM books LEFT JOIN category ON books.category_id = category.id`;
     conn.query(sql, (err, result) => {
       if (err) {
         return res.status(StatusCodes.BAD_REQUEST).end();
@@ -33,7 +33,7 @@ const getBookById = (req, res) => {
 
   let { id } = req.params;
 
-  let sql = "SELECT * FROM books WHERE id = ?";
+  let sql = `SELECT * FROM books LEFT JOIN category ON books.category_id = category.id WHERE books.id=?`;
 
   conn.query(sql, id, (err, result) => {
     if (err) {
