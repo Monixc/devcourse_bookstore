@@ -2,41 +2,46 @@ const conn = require("../mariadb");
 const { StatusCodes } = require("http-status-codes");
 
 const getAllBooks = (req, res) => {
-  let { category_id } = req.query;
+  let { category_id, news } = req.query;
 
-  if (category_id) {
-    let sql = `SELECT * FROM books LEFT JOIN category ON books.category_id = category.id WHERE books.category_id=?`;
-    conn.query(sql, category_id, (err, result) => {
-      if (err) {
-        return res.status(StatusCodes.BAD_REQUEST).end();
-      }
-
-      if (result.length) return res.status(StatusCodes.OK).json(result);
-      else return res.status(StatusCodes.NOT_FOUND).end();
-    });
-  } else {
-    let sql = `SELECT * FROM books LEFT JOIN category ON books.category_id = category.id`;
-    conn.query(sql, (err, result) => {
-      if (err) {
-        return res.status(StatusCodes.BAD_REQUEST).end();
-      }
-
-      return res.status(StatusCodes.OK).json(result);
-    });
+  let sql = "SELECT * FROM books";
+  let values = [];
+  if (category_id && news) {
+    sql +=
+      " WHERE category_id=? AND pub_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 MONTH) AND NOW()";
+    values = [category_id, news];
+  } else if (category_id) {
+    sql += " WHERE category_id=?";
+    values = category_id;
+  } else if (news) {
+    sql +=
+      " WHERE pub_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 MONTH) AND NOW()";
+    values = news;
   }
+
+  conn.query(sql, values, (err, result) => {
+    if (err) {
+      return res.status(StatusCodes.BAD_REQUEST).end();
+    }
+
+    if (result.length) {
+      return res.status(StatusCodes.OK).json(result);
+    } else {
+      return res.status(StatusCodes.NOT_FOUND).end();
+    }
+  });
 };
 
 const getBookById = (req, res) => {
-  //parseInt 적용 시, id 속성을 구조 분해 시도
-  //parseInt는 숫자를 반환하므로, 구조 분해 불가. '
-  //parseInt는 문자열을 정수로 변환하는데, 객체인 req.parmas 전체를 전달하는 오류가 있었다.
-
   let { id } = req.params;
 
-  let sql = `SELECT * FROM books LEFT JOIN category ON books.category_id = category.id WHERE books.id=?`;
+  let sql = `SELECT books.*, (SELECT category_name FROM category WHERE id = books.category_id) as category_name 
+             FROM books 
+             WHERE books.id=?`;
 
   conn.query(sql, id, (err, result) => {
     if (err) {
+      console.error("Error:", err);
       return res.status(StatusCodes.BAD_REQUEST).end();
     }
 
