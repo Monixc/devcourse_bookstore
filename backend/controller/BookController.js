@@ -2,38 +2,54 @@ const conn = require("../mariadb");
 const { StatusCodes } = require("http-status-codes");
 
 const getAllBooks = (req, res) => {
-  let { category_id, news, limit, currentPage } = req.query;
-
-  let offset = (currentPage - 1) * limit;
+  let { category_id, news } = req.query;
+  let limit = parseInt(req.query.limit) || 10;
+  let page = parseInt(req.query.page) || 1;
+  let offset = (page - 1) * limit;
 
   let sql = "SELECT *, (SELECT count(*) FROM likes WHERE books.id=liked_book_id) AS likes FROM books ";
+  let countSql = "SELECT count(*) as total FROM books ";
   let values = [];
+  let countValues = [];
+  let where = "";
   if (category_id && news === "true") {
-    sql +=
-      " WHERE category_id=? AND pub_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 MONTH) AND NOW()";
+    where = " WHERE category_id=? AND pub_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 MONTH) AND NOW()";
     values.push(parseInt(category_id));
+    countValues.push(parseInt(category_id));
   } else if (category_id) {
-    sql += " WHERE category_id=?";
+    where = " WHERE category_id=?";
     values.push(parseInt(category_id));
+    countValues.push(parseInt(category_id));
   } else if (news === "true") {
-    sql +=
-      " WHERE pub_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 MONTH) AND NOW()";
+    where = " WHERE pub_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 MONTH) AND NOW()";
   }
+  sql += where + " LIMIT ? OFFSET ?";
+  countSql += where;
+  values.push(limit, offset);
 
-  sql += " LIMIT ? OFFSET ?";
-  values.push(parseInt(limit), parseInt(offset));
-
-  conn.query(sql, values, (err, result) => {
+  // 1. 전체 개수 쿼리
+  conn.query(countSql, countValues, (err, countResult) => {
     if (err) {
       console.error("Error:", err);
       return res.status(StatusCodes.BAD_REQUEST).end();
     }
-
-    if (result.length) {
-      return res.status(StatusCodes.OK).json(result);
-    } else {
-      return res.status(StatusCodes.NOT_FOUND).end();
-    }
+    const total = countResult[0]?.total || 0;
+    // 2. 실제 데이터 쿼리
+    conn.query(sql, values, (err, result) => {
+      if (err) {
+        console.error("Error:", err);
+        return res.status(StatusCodes.BAD_REQUEST).end();
+      }
+      return res.status(StatusCodes.OK).json({
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        },
+        data: result
+      });
+    });
   });
 };
 
